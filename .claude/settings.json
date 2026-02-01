@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(curl -s https://raw.githubusercontent.com/carloscuesta/gitmoji/master/packages/gitmojis/src/gitmojis.json)",
+      "Bash(gh --version)",
+      "Bash(gh auth status)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr list --head:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh workflow run feature_branch_distribute.yml:*)",
+      "Bash(git branch --show-current)",
+      "Bash(git log:*)",
+      "Bash(which gh)",
+      "Read",
+      "Skill(distribute)"
+    ],
+    "deny": [
+      "Bash(rm -rf :*)",
+      "Bash(sudo :*)",
+      "Read(.env*)"
+    ]
+  },
+  "mcpServers": {}
+}

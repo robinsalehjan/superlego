@@ -1,0 +1,18 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Shell scripts must use LF line endings for cross-platform compatibility
+*.sh text eol=lf
+
+# Python scripts
+*.py text eol=lf
+
+# JSON files
+*.json text eol=lf
+
+# Markdown files
+*.md text eol=lf
+
+# Keep batch files with CRLF for Windows
+*.cmd text eol=crlf
+*.bat text eol=crlf

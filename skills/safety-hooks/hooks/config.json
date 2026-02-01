@@ -1,0 +1,21 @@
+{
+  "description": "Configuration for safety hooks. Edit this file to customize protection.",
+
+  "git_protection": {
+    "protected_branches": ["main", "master"],
+    "protected_tag_prefixes": ["v", "release-"],
+    "ask_on_merge_to_protected": true,
+    "ask_on_tag_delete": true
+  },
+
+  "bash_safety": {
+    "extra_allowlist": [],
+    "extra_block_patterns": [],
+    "extra_ask_patterns": []
+  },
+
+  "file_safety": {
+    "extra_block_patterns": [],
+    "extra_ask_patterns": []
+  }
+}

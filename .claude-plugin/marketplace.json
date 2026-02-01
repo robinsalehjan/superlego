@@ -1,0 +1,18 @@
+{
+  "name": "superlego",
+  "owner": {"name": "robinsalehjan"},
+  "plugins": [
+    {
+      "name": "skills",
+      "source": "./",
+      "version": "1.0.0",
+      "description": "A personal collection of skills and plugins to enhance Claude's capabilities."
+    },
+    {
+      "name": "safety-hooks",
+      "source": "./skills/safety-hooks",
+      "version": "2.0.0",
+      "description": "Prevents dangerous bash commands, protects sensitive files, and enforces git branch protection"
+    }
+  ]
+}

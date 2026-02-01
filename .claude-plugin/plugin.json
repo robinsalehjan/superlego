@@ -1,0 +1,9 @@
+{
+  "name": "skills",
+  "description": "A collection of skills for Swift, SwiftUI, macOS development, and more",
+  "version": "1.0.0",
+  "author": {
+    "name": "robinsalehjan"
+  },
+  "skills": "./skills"
+}

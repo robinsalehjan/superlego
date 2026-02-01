@@ -1,0 +1,32 @@
+{
+  "description": "Safety hooks that prevent dangerous bash commands, protect sensitive files, and enforce git branch protection",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/bash-safety-hook.py",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/git-branch-protection-hook.py",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/file-safety-hook.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

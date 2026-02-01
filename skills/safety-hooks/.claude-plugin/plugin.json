@@ -1,0 +1,8 @@
+{
+  "name": "safety-hooks",
+  "description": "Prevents dangerous bash commands, protects sensitive files, and enforces git branch protection",
+  "version": "2.0.0",
+  "author": {
+    "name": "superlego"
+  }
+}

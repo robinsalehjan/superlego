@@ -1,0 +1,10 @@
+# Archive Directory
+
+This directory contains summaries of completed tasks.
+
+When archiving a task:
+1. Extract key learnings to `<task-name>.md`
+2. Include: what was built, key decisions, gotchas discovered
+3. Delete the original `devdocs/<task-name>/` directory
+
+See `../README.md` for the full workflow.

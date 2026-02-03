@@ -154,7 +154,7 @@ safety-hooks/
 
 ```bash
 # Run all tests
-cd skills/safety-hooks
+cd plugins/safety-hooks
 python3 tests/test_hooks.py
 
 # Or with pytest

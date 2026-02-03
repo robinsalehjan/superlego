@@ -10,7 +10,7 @@
     },
     {
       "name": "safety-hooks",
-      "source": "./skills/safety-hooks",
+      "source": "./plugins/safety-hooks",
       "version": "2.0.0",
       "description": "Prevents dangerous bash commands, protects sensitive files, and enforces git branch protection"
     }

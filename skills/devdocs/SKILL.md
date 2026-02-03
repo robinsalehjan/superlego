@@ -205,12 +205,14 @@ When creating `progress.md` alongside a superpowers spec, use this header:
 
 ### Installing Scripts to a Project
 
-To enable script automation in a project, copy the scripts:
+To enable script automation in a project, copy the scripts to the project root:
 ```bash
-mkdir -p docs/plans/scripts
-cp path/to/superlego/skills/devdocs/archive/scripts/*.sh docs/plans/scripts/
-chmod +x docs/plans/scripts/*.sh
+mkdir -p scripts
+cp path/to/superlego/skills/devdocs/archive/scripts/*.sh scripts/
+chmod +x scripts/*.sh
 ```
+
+This standardizes script location at `./scripts/` for use across all skills.
 
 ## Reference Material
 

@@ -112,7 +112,36 @@ elif [ -z "$ISSUE_NUMBER" ]; then
 fi
 
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")"
-DEVDOCS_DIR="${DEVDOCS_ROOT:-$REPO_ROOT/.github/devdocs}"
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Auto-detect Superpowers Integration
+# ═══════════════════════════════════════════════════════════════════════════════
+USE_SUPERPOWERS=false
+SUPERPOWERS_DESIGN_SPEC=""
+SUPERPOWERS_PLAN_SPEC=""
+
+# Check if docs/plans/ directory exists
+if [ -d "$REPO_ROOT/docs/plans" ]; then
+    echo -e "${BLUE}🔍 Detected docs/plans/ directory - checking for superpowers integration...${NC}"
+
+    # Look for dated spec files (superpowers pattern: YYYY-MM-DD-*.md)
+    SPEC_COUNT=$(find "$REPO_ROOT/docs/plans" -maxdepth 1 -name "[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]-*.md" 2>/dev/null | wc -l | tr -d ' ')
+
+    if [ "$SPEC_COUNT" -gt 0 ]; then
+        USE_SUPERPOWERS=true
+        DEVDOCS_DIR="$REPO_ROOT/docs/plans"
+        echo -e "${GREEN}✅ Superpowers integration detected - using docs/plans/${NC}"
+        echo -e "${YELLOW}   Note: Will create progress.md only (superpowers specs replace plan.md)${NC}"
+    else
+        DEVDOCS_DIR="${DEVDOCS_ROOT:-$REPO_ROOT/.github/devdocs}"
+        echo -e "${YELLOW}⚠️  docs/plans/ exists but no superpowers specs found${NC}"
+        echo -e "${YELLOW}   Using .github/devdocs/ for standalone workflow${NC}"
+    fi
+else
+    DEVDOCS_DIR="${DEVDOCS_ROOT:-$REPO_ROOT/.github/devdocs}"
+    echo -e "${BLUE}ℹ️  No docs/plans/ directory - using standalone workflow${NC}"
+    echo -e "${BLUE}   Location: ${DEVDOCS_DIR}${NC}"
+fi
 
 # Create new issue if requested
 if [ "$CREATE_NEW" = true ]; then
@@ -164,9 +193,42 @@ ISSUE_MILESTONE=$(echo "$ISSUE_JSON" | jq -r '.milestone.title // "Backlog"')
 # Increased to 50 chars to reduce collision risk
 ISSUE_SLUG=$(echo "$ISSUE_TITLE" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//' | cut -c1-50)
 
-TASK_DIR="$DEVDOCS_DIR/issue-${ISSUE_NUMBER}-${ISSUE_SLUG}"
-PLAN_FILE="$TASK_DIR/plan.md"
-PROGRESS_FILE="$TASK_DIR/progress.md"
+# Set directory structure based on superpowers detection
+if [ "$USE_SUPERPOWERS" = true ]; then
+    # With superpowers: use feature name subdirectory, not issue-N-slug
+    FEATURE_NAME="${ISSUE_SLUG}"
+    TASK_DIR="$DEVDOCS_DIR/${FEATURE_NAME}"
+    PROGRESS_FILE="$TASK_DIR/progress.md"
+    # No plan.md - superpowers specs replace it
+
+    # Try to find existing superpowers specs for this feature
+    SUPERPOWERS_DESIGN_SPEC=$(find "$DEVDOCS_DIR" -maxdepth 1 -name "*-${FEATURE_NAME}-design.md" 2>/dev/null | head -1)
+    SUPERPOWERS_PLAN_SPEC=$(find "$DEVDOCS_DIR" -maxdepth 1 -name "*-${FEATURE_NAME}.md" ! -name "*-design.md" 2>/dev/null | head -1)
+
+    if [ -n "$SUPERPOWERS_DESIGN_SPEC" ]; then
+        echo -e "${GREEN}✅ Found superpowers design spec: $(basename "$SUPERPOWERS_DESIGN_SPEC")${NC}"
+    fi
+    if [ -n "$SUPERPOWERS_PLAN_SPEC" ]; then
+        echo -e "${GREEN}✅ Found superpowers plan spec: $(basename "$SUPERPOWERS_PLAN_SPEC")${NC}"
+    fi
+
+    if [ -z "$SUPERPOWERS_DESIGN_SPEC" ] && [ -z "$SUPERPOWERS_PLAN_SPEC" ]; then
+        echo -e "${YELLOW}⚠️  No superpowers specs found for '${FEATURE_NAME}'${NC}"
+        echo -e "${YELLOW}   You should run superpowers:brainstorming and superpowers:writing-plans first${NC}"
+        echo -e "${YELLOW}   Or this script will create progress.md pointing to non-existent specs${NC}"
+        read -p "Continue anyway? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo -e "${YELLOW}Aborted. Run superpowers skills first, then re-run this script.${NC}"
+            exit 0
+        fi
+    fi
+else
+    # Standalone: use issue-N-slug directory
+    TASK_DIR="$DEVDOCS_DIR/issue-${ISSUE_NUMBER}-${ISSUE_SLUG}"
+    PLAN_FILE="$TASK_DIR/plan.md"
+    PROGRESS_FILE="$TASK_DIR/progress.md"
+fi
 
 # Check if devdocs already exists
 if [ -d "$TASK_DIR" ]; then
@@ -186,8 +248,12 @@ mkdir -p "$TASK_DIR"
 # Get current date
 TODAY=$(date +%Y-%m-%d)
 
-# Generate plan.md
-cat > "$PLAN_FILE" << EOF
+# ═══════════════════════════════════════════════════════════════════════════════
+# Generate plan.md (only for standalone, NOT with superpowers)
+# ═══════════════════════════════════════════════════════════════════════════════
+if [ "$USE_SUPERPOWERS" = false ]; then
+    echo -e "${BLUE}📝 Creating plan.md...${NC}"
+    cat > "$PLAN_FILE" << EOF
 # ${ISSUE_TITLE} - Plan
 
 > Auto-generated from GitHub Issue [#${ISSUE_NUMBER}](${ISSUE_URL}) on ${TODAY}
@@ -265,14 +331,202 @@ ${ISSUE_BODY}
 | — | — | — |
 EOF
 
-# Generate progress.md
-cat > "$PROGRESS_FILE" << EOF
+    echo -e "${GREEN}✅ Created plan.md${NC}"
+else
+    echo -e "${YELLOW}⚠️  Skipping plan.md (superpowers specs replace it)${NC}"
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Generate progress.md (different format for superpowers vs standalone)
+# ═══════════════════════════════════════════════════════════════════════════════
+echo -e "${BLUE}📝 Creating progress.md...${NC}"
+
+if [ "$USE_SUPERPOWERS" = true ]; then
+    # Progress.md with superpowers integration
+    DESIGN_LINK=""
+    PLAN_LINK=""
+
+    if [ -n "$SUPERPOWERS_DESIGN_SPEC" ]; then
+        DESIGN_LINK="**Superpowers Design:** [$(basename "$SUPERPOWERS_DESIGN_SPEC")](../$(basename "$SUPERPOWERS_DESIGN_SPEC"))"
+    fi
+
+    if [ -n "$SUPERPOWERS_PLAN_SPEC" ]; then
+        PLAN_LINK="**Superpowers Plan:** [$(basename "$SUPERPOWERS_PLAN_SPEC")](../$(basename "$SUPERPOWERS_PLAN_SPEC"))"
+    fi
+
+    cat > "$PROGRESS_FILE" << EOF
 # ${ISSUE_TITLE} - Progress
 
 > This file tracks session-to-session progress. Update before ending each session.
->
-> **Quick Commands:** See [\`AGENTS.md\` §15](../../../AGENTS.md#15-quick-reference-copy-paste-for-agents) for build/test/lint commands.
 
+${DESIGN_LINK}
+${PLAN_LINK}
+**GitHub Issue:** [#${ISSUE_NUMBER}](${ISSUE_URL})
+**Last Updated:** ${TODAY}
+**Current Phase:** [Phase X - from superpowers plan]
+**Overall Status:** 🟡 In Progress
+
+---
+
+## Session Handoff (TL;DR)
+
+> **For instant context resumption.** Update this section at the end of each session.
+
+| Field | Value |
+|-------|-------|
+| **Next Action** | [Specific next step from superpowers plan] |
+| **Context Needed** | [Files to read] |
+| **Blocker** | None |
+| **Failed Approaches** | None |
+| **Current Superpowers Skill** | [test-driven-development / systematic-debugging / none] |
+
+---
+
+## Superpowers Workflow Tracking
+
+**Completed:**
+- [x] brainstorming (design spec created)
+- [x] writing-plans (implementation plan created)
+
+**In Progress:**
+- [ ] test-driven-development (TDD cycles tracked below)
+- [ ] systematic-debugging (debugging log below if needed)
+
+**Next:**
+- [ ] verification-before-completion
+- [ ] requesting-code-review
+- [ ] finishing-a-development-branch
+
+---
+
+## TDD Cycle Tracking
+
+> Track RED-GREEN-REFACTOR cycles when using superpowers:test-driven-development
+
+| Cycle | Feature/Test | RED | GREEN | REFACTOR | Notes |
+|-------|--------------|-----|-------|----------|-------|
+| 1 | [Feature name] | ⬜ | ⬜ | ⬜ | Planned |
+
+**TDD Notes:**
+- [Observations about TDD process]
+
+---
+
+## Debugging Log
+
+> Log root cause analysis from superpowers:systematic-debugging sessions
+
+**Session [N] - [Date]** (if needed)
+
+| Phase | Status | Findings |
+|-------|--------|----------|
+| 1. Reproduce | ⬜ | [Steps to reproduce] |
+| 2. Isolate | ⬜ | [Where bug occurs] |
+| 3. Root Cause | ⬜ | [Why it happens] |
+| 4. Verify Fix | ⬜ | [How fix was tested] |
+
+---
+
+## Quick Status
+
+> Reference the phases from the superpowers plan spec
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| Phase 1 | 🟡 In Progress | [From superpowers plan] |
+| Phase 2 | ⬜ Not Started | — |
+
+---
+
+## Phase 1: [Phase Name from Superpowers Plan] 🟡
+
+> Copy phase tasks from superpowers:writing-plans spec
+
+- [ ] **Current →** First task
+- [ ] Next task
+
+**Session Notes:**
+- [What was accomplished]
+
+---
+
+## Phase 2: [Phase Name from Superpowers Plan] ⬜
+
+- [ ] Item 1
+- [ ] Item 2
+
+---
+
+## Blockers
+
+- [ ] None currently
+
+## Decisions Made
+
+| Decision | Rationale | Date |
+|----------|-----------|------|
+| — | — | — |
+
+## Files Changed
+
+Key files touched during this task:
+- (none yet)
+
+## Next Session
+
+**To resume this task, tell the agent:**
+\`\`\`
+Continue work on ${FEATURE_NAME}. Read docs/plans/${FEATURE_NAME}/progress.md for current state.
+Reference the superpowers plan for phases and tasks.
+\`\`\`
+
+**Priority for next session:**
+1. [Most important next step from superpowers plan]
+
+## Session Log
+
+| Date | Context % | Work Done | Notes |
+|------|-----------|-----------|-------|
+| ${TODAY} | ~10% | Created progress tracking | Initial setup with superpowers |
+
+---
+
+## Completion Checklist (With Superpowers)
+
+> **Use this checklist when the task is complete.**
+
+- [ ] **Run verification** (superpowers:verification-before-completion)
+  - [ ] All tests pass
+  - [ ] Build succeeds
+  - [ ] No linter warnings
+
+- [ ] **Request code review** (superpowers:requesting-code-review)
+  - [ ] Address all feedback
+
+- [ ] **Finish development branch** (superpowers:finishing-a-development-branch)
+  - [ ] Decide: Merge / Create PR / Clean up
+
+- [ ] **Archive devdocs**
+  - [ ] Run: \`./scripts/archive-devdocs.sh ${FEATURE_NAME}\`
+  - [ ] Archive created in \`docs/plans/archive/${FEATURE_NAME}.md\`
+  - [ ] Entry added to \`docs/plans/archive/INDEX.md\`
+  - [ ] Superpowers specs remain in \`docs/plans/\` (do not delete!)
+
+- [ ] **Close GitHub Issue**
+  - [ ] Final PR includes \`Closes #${ISSUE_NUMBER}\`
+
+- [ ] **Feed back discoveries** to \`skills/devdocs/DEBUGGING.md\`
+  - [ ] Add debugging patterns and gotchas
+EOF
+
+else
+    # Progress.md for standalone (no superpowers)
+    cat > "$PROGRESS_FILE" << EOF
+# ${ISSUE_TITLE} - Progress
+
+> This file tracks session-to-session progress. Update before ending each session.
+
+**Plan:** [plan.md](plan.md)
 **GitHub Issue:** [#${ISSUE_NUMBER}](${ISSUE_URL})
 **Last Updated:** ${TODAY}
 **Current Phase:** Phase 1 - [Name]
@@ -352,28 +606,51 @@ Continue work on issue-${ISSUE_NUMBER}-${ISSUE_SLUG}. Read .github/devdocs/issue
 
 ---
 
-## Completion Checklist
+## Completion Checklist (Standalone)
 
 > **Use this checklist when the task is complete.**
 
+- [ ] **Verify completion**
+  - [ ] All tests pass
+  - [ ] Build succeeds
+  - [ ] Code reviewed
+
+- [ ] **Archive devdocs**
+  - [ ] Run: \`./scripts/archive-devdocs.sh issue-${ISSUE_NUMBER}-${ISSUE_SLUG}\`
+  - [ ] Archive created in \`.github/devdocs/archive/issue-${ISSUE_NUMBER}-${ISSUE_SLUG}.md\`
+
 - [ ] **Close GitHub Issue**
-  - [ ] Ensure final PR includes \`Closes #${ISSUE_NUMBER}\` in description
-  - [ ] Or close manually: \`gh issue close ${ISSUE_NUMBER} --comment "Completed"\`
-- [ ] **Update Feature Documentation** in \`{{DOCS_PATH}}/features/<Feature>/\`
-  - [ ] Update \`Implementation_Status.md\` with completed work
-  - [ ] Add implementation history link
-  - [ ] Mark phases complete in \`Implementation_Plan.md\`
-- [ ] **Feed back debugging discoveries** to \`.github/devdocs/DEBUGGING.md\`
-- [ ] **Update archive index** in \`.github/devdocs/archive/INDEX.md\`
-- [ ] **Create archive summary** at \`.github/devdocs/archive/issue-${ISSUE_NUMBER}-${ISSUE_SLUG}.md\`
-- [ ] **Delete working files** after archiving
+  - [ ] Final PR includes \`Closes #${ISSUE_NUMBER}\`
+
+- [ ] **Update documentation** (if applicable)
+  - [ ] Feature docs updated
 EOF
 
-echo -e "${GREEN}✅ Created plan.md and progress.md${NC}"
+fi
 
+echo -e "${GREEN}✅ Created progress.md${NC}"
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Add comment to GitHub issue with link to devdocs
-DEVDOCS_RELATIVE_PATH=".github/devdocs/issue-${ISSUE_NUMBER}-${ISSUE_SLUG}/"
-COMMENT_BODY="🤖 **DevDocs Created**
+# ═══════════════════════════════════════════════════════════════════════════════
+if [ "$USE_SUPERPOWERS" = true ]; then
+    DEVDOCS_RELATIVE_PATH="docs/plans/${FEATURE_NAME}/"
+    COMMENT_BODY="🤖 **DevDocs Progress Tracking Created**
+
+Session continuity with **superpowers** integration:
+- [\`${DEVDOCS_RELATIVE_PATH}progress.md\`](${DEVDOCS_RELATIVE_PATH}progress.md) - Session handoffs, TDD cycles, debugging log
+
+Plan files (created by superpowers):
+- [\`docs/plans/$(basename "$SUPERPOWERS_DESIGN_SPEC" 2>/dev/null || echo "YYYY-MM-DD-${FEATURE_NAME}-design.md")\`] - Design specification
+- [\`docs/plans/$(basename "$SUPERPOWERS_PLAN_SPEC" 2>/dev/null || echo "YYYY-MM-DD-${FEATURE_NAME}.md")\`] - Implementation plan
+
+To resume work on this issue, tell the agent:
+\`\`\`
+Continue work on ${FEATURE_NAME}. Read docs/plans/${FEATURE_NAME}/progress.md for current state.
+\`\`\`"
+else
+    DEVDOCS_RELATIVE_PATH=".github/devdocs/issue-${ISSUE_NUMBER}-${ISSUE_SLUG}/"
+    COMMENT_BODY="🤖 **DevDocs Created**
 
 Session continuity files for AI-assisted development:
 - [\`${DEVDOCS_RELATIVE_PATH}plan.md\`](${DEVDOCS_RELATIVE_PATH}plan.md) - Goals, scope, approach
@@ -383,13 +660,16 @@ To resume work on this issue, tell the agent:
 \`\`\`
 Continue work on issue-${ISSUE_NUMBER}-${ISSUE_SLUG}. Read .github/devdocs/issue-${ISSUE_NUMBER}-${ISSUE_SLUG}/progress.md for current state.
 \`\`\`"
+fi
 
 echo -e "${BLUE}💬 Adding comment to issue #${ISSUE_NUMBER}...${NC}"
 gh issue comment "$ISSUE_NUMBER" --body "$COMMENT_BODY"
 
 echo -e "${GREEN}✅ Added bidirectional link to issue${NC}"
 
+# ═══════════════════════════════════════════════════════════════════════════════
 # Summary
+# ═══════════════════════════════════════════════════════════════════════════════
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✅ DevDocs created successfully!${NC}"
@@ -398,6 +678,25 @@ echo ""
 echo -e "📁 Location: ${BLUE}${TASK_DIR}${NC}"
 echo -e "📋 Issue:    ${BLUE}${ISSUE_URL}${NC}"
 echo ""
-echo -e "To start working, tell the agent:"
-echo -e "${YELLOW}  Work on issue #${ISSUE_NUMBER}. Read .github/devdocs/issue-${ISSUE_NUMBER}-${ISSUE_SLUG}/plan.md for context.${NC}"
+
+if [ "$USE_SUPERPOWERS" = true ]; then
+    echo -e "⚡ ${YELLOW}Superpowers Integration Detected${NC}"
+    echo ""
+    echo -e "Next steps:"
+    echo -e "  1. ${BLUE}Ensure superpowers specs exist:${NC}"
+    echo -e "     - Run ${YELLOW}superpowers:brainstorming${NC} (creates design spec)"
+    echo -e "     - Run ${YELLOW}superpowers:writing-plans${NC} (creates implementation plan)"
+    echo -e "  2. ${BLUE}Start implementation:${NC}"
+    echo -e "     ${YELLOW}Work on ${FEATURE_NAME}. Read docs/plans/${FEATURE_NAME}/progress.md for tracking.${NC}"
+    echo -e "  3. ${BLUE}Use superpowers skills during development:${NC}"
+    echo -e "     - ${YELLOW}test-driven-development${NC} (track TDD cycles)"
+    echo -e "     - ${YELLOW}systematic-debugging${NC} (log debugging sessions)"
+    echo -e "     - ${YELLOW}verification-before-completion${NC} (before finishing)"
+    echo -e "     - ${YELLOW}requesting-code-review${NC} (review workflow)"
+    echo -e "     - ${YELLOW}finishing-a-development-branch${NC} (merge/PR decision)"
+else
+    echo -e "To start working, tell the agent:"
+    echo -e "${YELLOW}  Work on issue #${ISSUE_NUMBER}. Read .github/devdocs/issue-${ISSUE_NUMBER}-${ISSUE_SLUG}/plan.md for context.${NC}"
+fi
+
 echo ""

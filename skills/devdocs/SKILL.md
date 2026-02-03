@@ -22,46 +22,130 @@ Maintain session continuity across AI-assisted development sessions by persistin
 
 ## Superpowers Integration
 
-When using the `superpowers` plugin, specs and plans are created in `/docs/plans/`:
+DevDocs is designed to work seamlessly with the superpowers plugin workflow. Superpowers handles the "what" (specs and plans), while DevDocs handles the "when" (session continuity and progress tracking).
 
-| Superpowers Skill | Creates | DevDocs Adds |
-|-------------------|---------|--------------|
-| `superpowers:brainstorming` | `docs/plans/YYYY-MM-DD-<topic>-design.md` | `docs/plans/<topic>/progress.md` |
-| `superpowers:writing-plans` | `docs/plans/YYYY-MM-DD-<feature>.md` | `docs/plans/<feature>/progress.md` |
+### Full Workflow Integration
 
-**Workflow with Superpowers:**
-1. Superpowers creates the design or implementation plan in `/docs/plans/`
-2. DevDocs creates a matching directory with `progress.md` for session tracking
-3. The superpowers spec becomes the "plan" — no need for a separate `plan.md`
+| Superpowers Skill | When Used | Creates | DevDocs Role |
+|-------------------|-----------|---------|--------------|
+| `brainstorming` | Initial design exploration | `docs/plans/YYYY-MM-DD-<topic>-design.md` | References design spec in `progress.md` header |
+| `writing-plans` | Implementation planning | `docs/plans/YYYY-MM-DD-<feature>.md` | References plan spec in `progress.md` header |
+| `test-driven-development` | During implementation | TDD workflow in session | Tracks RED-GREEN-REFACTOR cycles in `progress.md` |
+| `systematic-debugging` | When bugs occur | Debugging analysis | Logs root cause in "Failed Approaches" section |
+| `verification-before-completion` | Before finishing | Verification checks | Triggers completion checklist |
+| `requesting-code-review` | After verification | Code review request | Triggers archive workflow |
+| `finishing-a-development-branch` | Final integration | Merge/PR decision | Completes devdocs lifecycle |
 
-**Example structure:**
+### Directory Structure
+
+**Recommended structure with Superpowers:**
 ```
 docs/plans/
-├── 2026-01-31-user-auth-design.md      # Created by superpowers:brainstorming
-├── 2026-01-31-user-auth.md             # Created by superpowers:writing-plans
-└── user-auth/
-    └── progress.md                      # Created by devdocs for session tracking
+├── 2026-01-31-user-auth-design.md      # superpowers:brainstorming
+├── 2026-01-31-user-auth.md             # superpowers:writing-plans
+├── user-auth/
+│   └── progress.md                      # devdocs session tracking
+└── archive/
+    └── user-auth.md                     # devdocs completion summary
 ```
 
+**Key Principles:**
+1. Superpowers specs live in `docs/plans/` root (never delete these)
+2. DevDocs creates `docs/plans/<feature>/progress.md` for session tracking
+3. When complete, `docs/plans/archive/<feature>.md` stores the summary
+4. The superpowers spec IS the plan — DevDocs never creates a separate `plan.md`
+
+### When to Use DevDocs with Superpowers
+
+```
+┌─────────────────────────────────────────┐
+│ Starting a new task?                    │
+└────────────┬────────────────────────────┘
+             │
+    ┌────────▼───────────┐
+    │ Single session?    │
+    │ (< 2 hours)        │
+    └─┬────────────────┬─┘
+      │ YES            │ NO
+      │                │
+      ▼                ▼
+  Superpowers only   Superpowers + DevDocs
+  (no devdocs)       for continuity
+      │                │
+      │                ▼
+      │            1. brainstorming
+      │            2. writing-plans
+      │            3. CREATE progress.md
+      │            4. Track across sessions
+      │            5. verification-before-completion
+      │            6. Archive when done
+      ▼
+  brainstorming
+  writing-plans
+  test-driven
+  verification
+  (all in one session)
+```
+
+**Use DevDocs when:**
+- Task will span multiple sessions (> 2 hours)
+- Context usage approaching 60-70%
+- Need to track failed approaches across sessions
+- Multiple TDD/debugging cycles expected
+
+**Skip DevDocs when:**
+- Single session task (< 2 hours)
+- Simple implementation from clear plan
+- No session handoff needed
+
 ## Workflow
+
+### Directory Structure Options
+
+**Option 1: With Superpowers (Recommended)**
+Use `docs/plans/` for tight integration with superpowers workflow:
+```
+docs/plans/
+├── 2026-01-31-auth-design.md           # superpowers:brainstorming
+├── 2026-01-31-auth.md                  # superpowers:writing-plans
+├── auth/
+│   └── progress.md                      # devdocs session tracking
+└── archive/
+    └── auth.md                          # devdocs completion summary
+```
+
+**Option 2: Standalone (No Superpowers)**
+Use `.github/devdocs/` for projects without superpowers:
+```
+.github/devdocs/
+├── issue-123-auth/
+│   ├── plan.md                          # devdocs plan
+│   └── progress.md                      # devdocs progress
+└── archive/
+    └── issue-123-auth.md                # devdocs completion
+```
 
 ### 1. Start a new task
 
 **With Superpowers spec (recommended):**
-If a superpowers spec exists in `/docs/plans/`, create only the progress file:
+If a superpowers spec exists in `docs/plans/`, create only the progress file:
 ```bash
 mkdir -p docs/plans/<feature-name>
 # Create progress.md using the template, linking to the superpowers spec
 ```
 
-**With GitHub Issue:**
+**With GitHub Issue (and superpowers):**
 ```bash
-./scripts/devdocs-create.sh <issue-number>
+# First run superpowers:brainstorming and superpowers:writing-plans
+# Then create progress tracking:
+mkdir -p docs/plans/<feature-name>
+# Create progress.md with issue link and spec references
 ```
 
 **Standalone task (no superpowers):**
 ```bash
-mkdir -p docs/plans/<task-name>
+# For projects not using superpowers
+mkdir -p .github/devdocs/<task-name>
 # Create plan.md and progress.md using templates
 ```
 
@@ -99,12 +183,25 @@ This creates a permanent summary in `docs/plans/archive/` and updates the index.
 
 ## Key Files
 
+**With Superpowers (docs/plans/):**
+
+| File | Created By | Purpose |
+|------|------------|---------|
+| `docs/plans/YYYY-MM-DD-<topic>-design.md` | superpowers:brainstorming | Design specification |
+| `docs/plans/YYYY-MM-DD-<feature>.md` | superpowers:writing-plans | Implementation plan |
+| `docs/plans/<feature>/progress.md` | devdocs | Session handoffs, current status, blockers, decisions |
+| `docs/plans/archive/<feature>.md` | devdocs | Completed task summary with key learnings |
+| `docs/plans/archive/INDEX.md` | devdocs | Searchable index of archived tasks |
+| `skills/devdocs/DEBUGGING.md` | Manual | Common debugging patterns (update with discoveries) |
+
+**Standalone (without Superpowers):**
+
 | File | Purpose |
 |------|---------|
-| `docs/plans/*.md` | Superpowers design specs and implementation plans |
-| `docs/plans/<feature>/progress.md` | Session handoffs, current status, blockers, decisions |
-| `docs/plans/archive/` | Completed task summaries and searchable index |
-| `DEBUGGING.md` | Common debugging patterns (update with new discoveries) |
+| `.github/devdocs/<task>/plan.md` | Goals, phases, approach |
+| `.github/devdocs/<task>/progress.md` | Session handoffs, current status |
+| `.github/devdocs/archive/<task>.md` | Completed task summary |
+| `.github/devdocs/archive/INDEX.md` | Searchable index |
 
 ## Context Management
 
@@ -134,66 +231,157 @@ When operating in environments with terminal access (VS Code Copilot Chat, Claud
 
 **Before creating devdocs, check for existing superpowers specs:**
 ```bash
+# Check if project uses superpowers
 ls docs/plans/*.md 2>/dev/null
+
+# Also check for docs/plans/ directory existence
+[ -d "docs/plans" ] && echo "Superpowers structure detected"
 ```
 
-If superpowers specs exist (files like `YYYY-MM-DD-<feature>-design.md` or `YYYY-MM-DD-<feature>.md`):
-1. **Do NOT create a separate plan.md** — the superpowers spec IS the plan
-2. Create only `docs/plans/<feature>/progress.md` for session tracking
-3. Link to the superpowers spec in the progress file's header
+**If superpowers specs exist** (files like `YYYY-MM-DD-<feature>-design.md` or `YYYY-MM-DD-<feature>.md`):
+1. ✅ Use `docs/plans/` as the base directory
+2. ✅ **Do NOT create a separate plan.md** — the superpowers spec IS the plan
+3. ✅ Create only `docs/plans/<feature>/progress.md` for session tracking
+4. ✅ Link to superpowers spec(s) in the progress file header
+5. ✅ Create archive in `docs/plans/archive/`
+
+**If no superpowers** (no `docs/plans/` directory or no dated spec files):
+1. ✅ Use `.github/devdocs/` as the base directory
+2. ✅ Create both `plan.md` and `progress.md`
+3. ✅ Create archive in `.github/devdocs/archive/`
 
 ### Creating DevDocs
 
-**With existing superpowers spec (preferred):**
+**Path 1: With Superpowers (Recommended)**
 ```bash
-# Extract feature name from superpowers spec filename
-# e.g., 2026-01-31-user-auth.md → user-auth
-mkdir -p docs/plans/<feature-name>
-# Create progress.md with reference to superpowers spec
+# Step 1: User runs superpowers:brainstorming
+# Creates: docs/plans/YYYY-MM-DD-<feature>-design.md
+
+# Step 2: User runs superpowers:writing-plans
+# Creates: docs/plans/YYYY-MM-DD-<feature>.md
+
+# Step 3: Create DevDocs progress tracking
+# Extract feature name from spec filename (e.g., 2026-01-31-user-auth.md → user-auth)
+FEATURE_NAME="user-auth"  # from superpowers spec
+mkdir -p docs/plans/$FEATURE_NAME
+
+# Create progress.md with references to superpowers specs
+# Use progress.template.md and fill in:
+# - Link to design spec (if exists)
+# - Link to plan spec
+# - GitHub issue link (if applicable)
 ```
 
-**With GitHub Issue (if scripts installed):**
+**Path 2: With GitHub Issue + Superpowers**
 ```bash
-# Run in terminal - creates issue-linked devdocs with bidirectional GitHub linking
+# Assumes superpowers specs already created
 ./scripts/devdocs-create.sh <issue-number>
+# Auto-detects superpowers specs and creates in docs/plans/
 ```
 
-**Standalone (no superpowers, no issue):**
+**Path 3: Standalone (No Superpowers)**
 ```bash
-mkdir -p docs/plans/<task-name>
-# Create plan.md AND progress.md using templates
+# For projects not using superpowers
+mkdir -p .github/devdocs/<task-name>
+# Create BOTH plan.md AND progress.md using templates
 ```
 
 ### Progress File for Superpowers Integration
 
-When creating `progress.md` alongside a superpowers spec, use this header:
+When creating `progress.md` alongside superpowers specs, use this header:
 
 ```markdown
 # <Feature Name> - Progress
 
-**Superpowers Spec:** [YYYY-MM-DD-<feature>.md](../YYYY-MM-DD-<feature>.md)
+**Superpowers Design:** [YYYY-MM-DD-<feature>-design.md](../YYYY-MM-DD-<feature>-design.md) (if exists)
+**Superpowers Plan:** [YYYY-MM-DD-<feature>.md](../YYYY-MM-DD-<feature>.md)
 **GitHub Issue:** #[number] or N/A
 **Last Updated:** [YYYY-MM-DD]
-**Current Phase:** [Phase X - Name]
+**Current Phase:** [Phase X - Name from superpowers plan]
 **Overall Status:** 🟡 In Progress
 
 ---
 
 ## Session Handoff (TL;DR)
+| Field | Value |
+|-------|-------|
+| **Next Action** | [Specific next step] |
+| **Context Needed** | [Files to read] |
+| **Blocker** | None / [Description] |
+| **Current Superpowers Skill** | test-driven-development / systematic-debugging / etc. |
+
+---
+
+## Superpowers Workflow Tracking
+
+**Completed:**
+- [x] brainstorming (design spec created)
+- [x] writing-plans (implementation plan created)
+
+**In Progress:**
+- [ ] test-driven-development (RED-GREEN-REFACTOR cycles below)
+- [ ] systematic-debugging (if needed)
+
+**Next:**
+- [ ] verification-before-completion
+- [ ] requesting-code-review
+- [ ] finishing-a-development-branch
+
+---
+
+## TDD Cycle Tracking (if using test-driven-development)
+
+| Cycle | Feature | RED | GREEN | REFACTOR | Notes |
+|-------|---------|-----|-------|----------|-------|
+| 1 | [feature] | ✅ | ✅ | ✅ | [notes] |
+| 2 | [feature] | ✅ | 🟡 | ⬜ | Currently here |
+
+---
+
+## Debugging Log (if using systematic-debugging)
+
+**Latest Debugging Session:** [Date]
+- **Root Cause:** [from 4-phase analysis]
+- **Fix Applied:** [description]
+- **Verification:** [how confirmed]
+- **Added to Failed Approaches:** [Yes/No]
+
 ...
 ```
 
 ### Archiving Completed Tasks
 
-**If scripts are installed:**
+**With Superpowers (Recommended):**
 ```bash
-./scripts/archive-devdocs.sh <task-name>
+# After running superpowers:verification-before-completion
+# and superpowers:requesting-code-review
+./scripts/archive-devdocs.sh <feature-name>
+
+# This creates:
+# - docs/plans/archive/<feature-name>.md (summary)
+# - Updates docs/plans/archive/INDEX.md
+# - Deletes docs/plans/<feature-name>/ (progress tracking)
+# - KEEPS superpowers specs in docs/plans/*.md (never delete these!)
 ```
 
-**Manual archiving:**
-1. Create summary in `docs/plans/archive/<task-name>.md`
-2. Add entry to `docs/plans/archive/INDEX.md`
-3. Optionally delete the working devdocs directory (keep superpowers specs)
+**Standalone (No Superpowers):**
+```bash
+./scripts/archive-devdocs.sh <task-name>
+
+# This creates:
+# - .github/devdocs/archive/<task-name>.md
+# - Updates .github/devdocs/archive/INDEX.md
+# - Optionally deletes .github/devdocs/<task-name>/
+```
+
+**What Gets Archived vs Kept:**
+
+| File | Action | Reason |
+|------|--------|--------|
+| `docs/plans/YYYY-MM-DD-*.md` | ✅ KEEP | Superpowers specs are permanent |
+| `docs/plans/<feature>/progress.md` | ❌ DELETE | Session tracking no longer needed |
+| `docs/plans/archive/<feature>.md` | ✅ CREATE | Permanent summary with learnings |
+| `docs/plans/archive/INDEX.md` | ✅ UPDATE | Add searchable entry |
 
 ### Environment Compatibility
 

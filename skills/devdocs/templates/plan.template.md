@@ -1,9 +1,14 @@
 # [Task Name] - Plan
 
-> Copy this template to `devdocs/<task-name>/plan.md` when starting a new task.
-> For issue-linked tasks, use `devdocs/issue-<number>-<short-name>/` naming.
+> **IMPORTANT:** Only use this template if NOT using superpowers plugin.
 >
-> **Reference:** See [`AGENTS.md`](../../../AGENTS.md) for all coding standards.
+> **With Superpowers:** Use superpowers:brainstorming and superpowers:writing-plans instead.
+> They create design and implementation specs that replace this plan.md file.
+>
+> **Standalone (No Superpowers):** Copy this template to `.github/devdocs/<task-name>/plan.md`
+> For issue-linked tasks, use `.github/devdocs/issue-<number>-<short-name>/` naming.
+>
+> **Reference:** See project documentation for coding standards.
 
 ## GitHub Issue
 

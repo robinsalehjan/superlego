@@ -8,6 +8,38 @@ description: Scaffold, build, and package SwiftPM-based macOS apps without an Xc
 ## Overview
 Bootstrap a complete SwiftPM macOS app folder, then build, package, and run it without Xcode. Use `assets/templates/bootstrap/` for the starter layout and `references/packaging.md` + `references/release.md` for packaging and release details.
 
+## Prerequisites
+
+**Required Tools:**
+- Swift Package Manager (part of Xcode or Swift toolchain)
+- `codesign` and `notarytool` (part of Xcode Command Line Tools)
+- `create-dmg` (for DMG creation) - install via Homebrew: `brew install create-dmg`
+- Sparkle framework (optional, for auto-updates)
+
+**For Signing & Notarization:**
+- Apple Developer account with valid certificates
+- App-specific password for notarization
+
+Verify installation:
+```bash
+swift --version
+codesign --version
+notarytool --help
+```
+
+## Installing Templates
+
+Templates and scripts are located in the skill directory:
+```bash
+# Copy bootstrap template for new projects
+cp -r ~/.claude/plugins/superlego/skills/macos-spm-app-packaging/assets/templates/bootstrap/ ./
+
+# Copy specific scripts to your project
+mkdir -p Scripts
+cp ~/.claude/plugins/superlego/skills/macos-spm-app-packaging/assets/templates/*.sh Scripts/
+chmod +x Scripts/*.sh
+```
+
 ## Two-Step Workflow
 1) Bootstrap the project folder
    - Copy `assets/templates/bootstrap/` into a new repo.

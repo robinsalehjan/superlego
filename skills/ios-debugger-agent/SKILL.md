@@ -8,6 +8,18 @@ description: Use xcodebuild to build, run, launch, and debug the current iOS pro
 ## Overview
 Use `xcodebuild` to build and run the current project scheme on a booted iOS simulator, interact with the UI, and capture logs. Use `xcrun simctl` for simulator control, logs, and view inspection.
 
+## Prerequisites
+
+**Required Tools:**
+- Xcode Command Line Tools (provides `xcodebuild`, `xcrun`, `simctl`)
+- iOS Simulator (installed with Xcode)
+- `instruments` (part of Xcode, for performance profiling)
+
+Install Xcode from the App Store or download from developer.apple.com. Install Command Line Tools with:
+```bash
+xcode-select --install
+```
+
 ## Core Workflow
 Follow this sequence unless the user asks for a narrower action.
 

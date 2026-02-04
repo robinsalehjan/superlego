@@ -13,6 +13,16 @@ Maintain session continuity across AI-assisted development sessions by persistin
 
 **Beads Integration:** DevDocs can integrate with Beads for task tracking. When Beads is available, devdocs can sync task status and detect parallel work across team members.
 
+## Prerequisites
+
+**Required:**
+- Git repository
+- Text editor or IDE
+
+**Optional Integrations:**
+- **Superpowers plugin** - Recommended for multi-session tasks. Provides brainstorming, planning, and verification workflows that complement devdocs session tracking.
+- **Beads** - Optional task tracking system. Provides GitHub issue synchronization and parallel work detection. Install from [Beads documentation](https://beads.dev) if team coordination is needed. All Beads-related sections in this skill can be skipped if not using Beads.
+
 ## When to Use
 
 - Starting a new multi-session task or feature implementation
@@ -461,7 +471,7 @@ When creating `progress.md` alongside superpowers specs, use this header:
 To enable script automation in a project, copy the scripts to the project root:
 ```bash
 mkdir -p scripts
-cp path/to/superlego/skills/devdocs/archive/scripts/*.sh scripts/
+cp ~/.claude/plugins/superlego/skills/devdocs/scripts/*.sh scripts/
 chmod +x scripts/*.sh
 ```
 

@@ -31,12 +31,6 @@ Superlego provides skills for Swift, SwiftUI, and iOS/macOS development. Each sk
 | `superlego:macos-spm-app-packaging` | Packaging macOS apps, notarization, code signing, DMG creation |
 | `superlego:app-store-changelog` | Generating App Store release notes from git history |
 
-### Safety
-
-| Skill | Use When |
-|-------|----------|
-| `superlego:safety-hooks` | Understanding the pre-tool-use safety hooks that protect against dangerous operations |
-
 ## How to Use Skills
 
 ### 1. Check for Relevant Skills

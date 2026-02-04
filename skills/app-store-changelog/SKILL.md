@@ -8,6 +8,15 @@ description: Create user-facing App Store release notes by collecting and summar
 ## Overview
 Generate a comprehensive, user-facing changelog from git history since the last tag, then translate commits into clear App Store release notes.
 
+## Installing Scripts
+
+To use the script in your project:
+```bash
+mkdir -p scripts
+cp ~/.claude/plugins/superlego/skills/app-store-changelog/scripts/collect_release_changes.sh scripts/
+chmod +x scripts/collect_release_changes.sh
+```
+
 ## Workflow
 
 ### 1) Collect changes

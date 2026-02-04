@@ -9,6 +9,27 @@ description: End-to-end GitHub issue fix workflow using gh, local code changes, 
 
 Resolve a GitHub issue from intake through fix, validation, and push using gh, local edits, `xcodebuild`, and git.
 
+## Prerequisites
+
+**Required Tools:**
+- `gh` CLI - GitHub command-line tool ([installation](https://cli.github.com/))
+- Git configured with GitHub authentication
+- `xcodebuild` (for iOS/macOS projects) - part of Xcode Command Line Tools
+- `rg` (ripgrep) for code searching ([installation](https://github.com/BurntSushi/ripgrep))
+
+Verify installation:
+```bash
+gh --version
+git --version
+xcodebuild -version
+rg --version
+```
+
+Authenticate with GitHub:
+```bash
+gh auth login
+```
+
 ## Workflow
 
 ### 1) Intake and issue context
@@ -21,7 +42,7 @@ Resolve a GitHub issue from intake through fix, validation, and push using gh, l
 
 1. Use `rg -n` to locate likely files and entry points.
 2. Read the relevant code paths with `sed -n` or `rg -n` context.
-3. Follow repo-specific conventions (AGENTS/CLAUDE instructions).
+3. Follow repo-specific conventions (check CONTRIBUTING.md, .claude/ directory, README, or other project documentation for coding standards and architecture patterns).
 
 ### 3) Implement the fix
 

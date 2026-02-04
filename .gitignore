@@ -177,3 +177,6 @@ plans/*
 .worktrees/
 
 .claude/settings.local.json
+
+# Beads task tracking cache
+.beads/

@@ -30,6 +30,23 @@ sed_inplace() {
     fi
 }
 
+# Check for required dependencies
+check_dependencies() {
+    local missing=()
+
+    if ! command -v jq &> /dev/null; then
+        missing+=("jq")
+    fi
+
+    if [ ${#missing[@]} -gt 0 ]; then
+        echo -e "${RED}❌ Missing required dependencies: ${missing[*]}${NC}"
+        echo "   Install with: brew install ${missing[*]}"
+        exit 1
+    fi
+}
+
+check_dependencies
+
 # Default values
 DRY_RUN=false
 
@@ -68,7 +85,13 @@ if [ -z "$TASK_NAME" ]; then
     echo "   Example: $0 issue-123-feature-name"
     echo ""
     echo "Available tasks:"
-    ls -d .github/devdocs/*/ 2>/dev/null | grep -v -E "(templates|archive)" | xargs -I {} basename {} || echo "   No active tasks found"
+    # Use glob pattern instead of ls | grep
+    for dir in .github/devdocs/*/; do
+        [ -d "$dir" ] || continue
+        dirname=$(basename "$dir")
+        [[ "$dirname" =~ ^(templates|archive)$ ]] && continue
+        echo "   $dirname"
+    done
     exit 1
 fi
 
@@ -111,7 +134,13 @@ if [ ! -d "$TASK_DIR" ]; then
     echo -e "${RED}❌ Task directory not found: $TASK_DIR${NC}"
     echo ""
     echo "Available tasks:"
-    ls -d "$DEVDOCS_DIR"/*/ 2>/dev/null | grep -v -E "(templates|archive)" | xargs -I {} basename {} || echo "   No active tasks found"
+    # Use glob pattern instead of ls | grep
+    for dir in "$DEVDOCS_DIR"/*/; do
+        [ -d "$dir" ] || continue
+        dirname=$(basename "$dir")
+        [[ "$dirname" =~ ^(templates|archive)$ ]] && continue
+        echo "   $dirname"
+    done
     exit 1
 fi
 
@@ -132,6 +161,53 @@ echo -e "${BLUE}📋 Archiving: $TASK_NAME${NC}"
 
 # Validate devdocs structure
 validate_devdocs_structure
+
+# ═══════════════════════════════════════════════════════════════
+# Beads Cleanup (if epic exists)
+# ═══════════════════════════════════════════════════════════════
+BEADS_STATS=""
+
+if [ -f "$PROGRESS_FILE" ] && command -v bd &> /dev/null; then
+    # Extract Beads epic ID from progress.md
+    BEADS_EPIC_ID=$(grep -oE '\*\*Beads Epic:\*\* `([^`]+)`' "$PROGRESS_FILE" | sed -E 's/.*`([^`]+)`.*/\1/')
+
+    # Validate epic ID format
+    if [ -n "$BEADS_EPIC_ID" ] && ! [[ "$BEADS_EPIC_ID" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        echo -e "${YELLOW}⚠️  Invalid Beads epic ID format: $BEADS_EPIC_ID - skipping cleanup${NC}"
+        BEADS_EPIC_ID=""
+    fi
+
+    if [ -n "$BEADS_EPIC_ID" ]; then
+        echo -e "${BLUE}🔷 Archiving Beads epic $BEADS_EPIC_ID...${NC}"
+
+        # Run cleanup script
+        BEADS_STATS=$("$REPO_ROOT/skills/devdocs/scripts/bd-cleanup.sh" "$BEADS_EPIC_ID" 2>/dev/null) || {
+            echo -e "${YELLOW}⚠️  Beads cleanup failed - continuing${NC}"
+        }
+
+        if [ -n "$BEADS_STATS" ]; then
+            # Validate JSON structure
+            if ! echo "$BEADS_STATS" | jq -e '.total, .completed, .epic_id' &>/dev/null; then
+                echo -e "${YELLOW}⚠️  Invalid Beads response - skipping stats${NC}"
+                BEADS_STATS=""
+            else
+                BEADS_TOTAL=$(echo "$BEADS_STATS" | jq -r '.total // empty')
+                BEADS_COMPLETED=$(echo "$BEADS_STATS" | jq -r '.completed // empty')
+
+                # Validate extracted values
+                if [ -z "$BEADS_TOTAL" ] || [ -z "$BEADS_COMPLETED" ]; then
+                    echo -e "${YELLOW}⚠️  Missing Beads task counts - skipping stats${NC}"
+                    BEADS_STATS=""
+                elif ! [[ "$BEADS_TOTAL" =~ ^[0-9]+$ ]] || ! [[ "$BEADS_COMPLETED" =~ ^[0-9]+$ ]]; then
+                    echo -e "${YELLOW}⚠️  Invalid Beads task counts - skipping stats${NC}"
+                    BEADS_STATS=""
+                else
+                    echo -e "${GREEN}✅ Beads epic archived: $BEADS_COMPLETED/$BEADS_TOTAL tasks completed${NC}"
+                fi
+            fi
+        fi
+    fi
+fi
 
 # Extract information from plan.md
 TASK_TITLE=$(grep -m1 "^# " "$PLAN_FILE" | sed 's/^# //' | sed 's/ - Plan$//' || echo "$TASK_NAME")
@@ -171,7 +247,6 @@ if [ -z "$GOTCHA" ]; then
 fi
 
 # Current date
-TODAY=$(date +%Y-%m-%d)
 MONTH=$(date +%Y-%m)
 
 # Create archive file
@@ -189,7 +264,7 @@ if [ "$DRY_RUN" = false ]; then
 # $TASK_TITLE - Summary
 
 **Completed:** $MONTH
-**Tags:** \`$(echo "$TAGS" | sed 's/,/\`, \`/g')\`
+**Tags:** \`${TAGS//,/\`, \`}\`
 **Archived From:** \`devdocs/$TASK_NAME/\`
 EOF
 else
@@ -231,6 +306,29 @@ EOF
 EOF
     echo "$FILES" >> "$ARCHIVE_FILE"
 
+    # Include Beads stats in archive file if available
+    if [ -n "$BEADS_STATS" ]; then
+        BEADS_TOTAL=$(echo "$BEADS_STATS" | jq -r '.total')
+        BEADS_COMPLETED=$(echo "$BEADS_STATS" | jq -r '.completed')
+        BEADS_EPIC_ID=$(echo "$BEADS_STATS" | jq -r '.epic_id')
+
+        cat >> "$ARCHIVE_FILE" << EOF
+
+## Beads Task Tracking
+
+**Epic ID:** \`$BEADS_EPIC_ID\`
+**Final Status:** $BEADS_COMPLETED/$BEADS_TOTAL tasks completed
+**Completion Rate:** $(awk -v total="$BEADS_TOTAL" -v completed="$BEADS_COMPLETED" 'BEGIN {
+    if (total > 0) {
+        printf "%.1f", (completed/total)*100
+    } else {
+        print "N/A"
+    }
+}')%
+
+EOF
+    fi
+
     cat >> "$ARCHIVE_FILE" << EOF
 
 ## Gotchas Discovered
@@ -263,6 +361,29 @@ EOF
 EOF
     echo "$FILES"
 
+    # Include Beads stats in dry-run preview if available
+    if [ -n "$BEADS_STATS" ]; then
+        BEADS_TOTAL=$(echo "$BEADS_STATS" | jq -r '.total')
+        BEADS_COMPLETED=$(echo "$BEADS_STATS" | jq -r '.completed')
+        BEADS_EPIC_ID=$(echo "$BEADS_STATS" | jq -r '.epic_id')
+
+        cat << EOF
+
+## Beads Task Tracking
+
+**Epic ID:** \`$BEADS_EPIC_ID\`
+**Final Status:** $BEADS_COMPLETED/$BEADS_TOTAL tasks completed
+**Completion Rate:** $(awk -v total="$BEADS_TOTAL" -v completed="$BEADS_COMPLETED" 'BEGIN {
+    if (total > 0) {
+        printf "%.1f", (completed/total)*100
+    } else {
+        print "N/A"
+    }
+}')%
+
+EOF
+    fi
+
     cat << EOF
 
 ## Gotchas Discovered
@@ -288,7 +409,8 @@ fi
 echo -e "${BLUE}📑 Updating archive index...${NC}"
 
 # Format tags for the table
-TAGS_FORMATTED=$(echo "$TAGS" | sed 's/,/, /g' | sed 's/^/`/' | sed 's/$/ `/g' | sed 's/, /`, `/g')
+TAGS_WITH_SPACES=${TAGS//,/, }
+TAGS_FORMATTED="\`${TAGS_WITH_SPACES//, /\`, \`}\`"
 
 # Create the new entry
 NEW_ENTRY="| [$TASK_NAME]($TASK_NAME.md) | ${ISSUE_NUMBER:+[#$ISSUE_NUMBER]($ISSUE_URL)}${ISSUE_NUMBER:-—} | $MONTH | $TAGS_FORMATTED | $TASK_TITLE | $GOTCHA |"

@@ -2,6 +2,17 @@
 
 This directory implements the **DevDocs Pattern** for session continuity across AI-assisted development sessions, with **tight superpowers integration** (recommended) or standalone operation.
 
+## Prerequisites
+
+**Required:**
+- Git (for version control)
+- GitHub CLI (`gh`) installed and authenticated for GitHub integration
+
+**Optional:**
+- Superpowers plugin (recommended for planning workflows)
+- Beads task tracker (for team coordination and parallel work detection)
+- `jq` (for JSON processing in scripts)
+
 ## Superpowers Integration (Recommended)
 
 DevDocs is designed to work seamlessly with the **superpowers** plugin workflow. Superpowers handles the "what" (specs/plans), while DevDocs handles the "when" (session continuity).
@@ -30,6 +41,359 @@ docs/plans/
 ```
 
 **Key Principle:** When superpowers specs exist, devdocs does NOT create `plan.md` — the superpowers spec IS the plan. The script auto-detects which mode to use.
+
+## Architecture
+
+DevDocs uses a three-layer architecture to manage task state, planning, and execution:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Layer 1: Planning                             │
+│                   (What to build)                                │
+├─────────────────────────────────────────────────────────────────┤
+│  Superpowers Plugin (Optional)                                   │
+│  - brainstorming     → docs/plans/YYYY-MM-DD-feature-design.md  │
+│  - writing-plans     → docs/plans/YYYY-MM-DD-feature.md         │
+│                                                                  │
+│  OR Manual Planning                                              │
+│  - .github/devdocs/<task>/plan.md                               │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                 Layer 2: Execution Tracking                      │
+│              (How work progresses)                               │
+├─────────────────────────────────────────────────────────────────┤
+│  DevDocs Progress Files                                          │
+│  - docs/plans/<feature>/progress.md (with superpowers)          │
+│  - .github/devdocs/<task>/progress.md (standalone)              │
+│                                                                  │
+│  Tracks:                                                         │
+│  - Current phase and task status                                │
+│  - Session handoffs (context for next session)                  │
+│  - Failed approaches (what didn't work)                         │
+│  - Blockers and decisions                                       │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                Layer 3: Task State (Optional)                    │
+│            (Team coordination)                                   │
+├─────────────────────────────────────────────────────────────────┤
+│  Beads Task Tracker (Optional)                                   │
+│  - .beads/tasks/<issue>.json (local state, git-ignored)         │
+│  - GitHub issue integration (syncs status)                      │
+│  - Parallel work detection                                      │
+│                                                                  │
+│  When to use:                                                    │
+│  - Team environment with multiple developers                    │
+│  - Need coordination on shared codebase                         │
+│  - Want automatic GitHub sync                                   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Workflow Phases
+
+**Phase 1: Planning**
+- Create specs using superpowers (recommended) or manual planning
+- Define goals, phases, and success criteria
+- Creates plan files in `docs/plans/` or `.github/devdocs/`
+
+**Phase 2: Execution**
+- Initialize progress tracking with `devdocs-create.sh`
+- Work through implementation phases
+- Update `progress.md` with current state, blockers, decisions
+- Use session handoffs at 60-70% context
+- Optional: Track with Beads for team coordination
+
+**Phase 3: Completion**
+- Run verification and code review (superpowers skills)
+- Archive session history with `archive-devdocs.sh`
+- Creates permanent summary in archive/
+- Updates archive INDEX for searchability
+
+## Beads Integration (Optional)
+
+Beads adds structured task tracking with dependency management and GitHub sync to the DevDocs workflow. Use it for team coordination and parallel work detection.
+
+### What Changed
+
+The Beads integration adds:
+
+**New Scripts (5):**
+- `bd-init.sh` - Initialize Beads epic from plan
+- `bd-from-plan.sh` - Extract structured tasks from plan
+- `bd-sync-to-github.sh` - Sync Beads status to GitHub
+- `bd-parallel-tasks.sh` - Find ready tasks for parallel work
+- `bd-cleanup.sh` - Archive completed epic
+
+**Enhanced Scripts (2):**
+- `devdocs-create.sh` - Added `--beads` flag to auto-initialize epic
+- `archive-devdocs.sh` - Auto-detects and archives Beads epic
+
+**Updated Templates (1):**
+- `progress.template.md` - Added Beads integration sections
+
+**Updated Documentation (4):**
+- `SKILL.md` - Added comprehensive Beads integration section
+- `README.md` - Added three-layer architecture diagram
+- `.gitignore` - Added `.beads/` directory
+- `TESTING.md` - Added Beads test scenarios
+
+### Installation
+
+**Prerequisites:**
+- Git repository (required)
+- GitHub CLI (`gh`) installed and authenticated (required)
+- Bash shell (required)
+- Beads task tracker installed (optional, for enhanced features)
+- `jq` for JSON processing (optional, used by Beads scripts)
+
+**Setup Steps:**
+
+1. **Copy scripts to your project:**
+   ```bash
+   mkdir -p scripts
+   cp skills/devdocs/scripts/*.sh scripts/
+   chmod +x scripts/*.sh
+   ```
+
+2. **Copy templates:**
+   ```bash
+   mkdir -p .github/devdocs/templates
+   cp skills/devdocs/templates/* .github/devdocs/templates/
+   ```
+
+   Or for superpowers integration:
+   ```bash
+   mkdir -p docs/plans/templates
+   cp skills/devdocs/templates/* docs/plans/templates/
+   ```
+
+3. **Install Beads (optional):**
+   ```bash
+   # Installation method depends on Beads distribution
+   # Example: npm install -g @beads/cli
+   beads init
+   ```
+
+4. **Verify setup:**
+   ```bash
+   # Check scripts are executable
+   ls -la scripts/bd-*.sh
+
+   # Check Beads available (if installed)
+   command -v bd && echo "Beads available"
+   ```
+
+### Usage Examples
+
+**Basic Workflow (Without Beads):**
+```bash
+# Create devdocs for GitHub issue
+./scripts/devdocs-create.sh 123
+
+# Work on implementation, update progress.md
+
+# Archive when complete
+./scripts/archive-devdocs.sh issue-123-feature-name
+```
+
+**Enhanced Workflow (With Beads):**
+```bash
+# Create devdocs with Beads epic
+./scripts/devdocs-create.sh 123 --beads
+
+# Check what you created
+cat docs/plans/feature/progress.md
+# Shows: Beads Epic: bd-xxxx with task table
+
+# Find tasks ready for parallel work
+./scripts/bd-parallel-tasks.sh bd-xxxx
+
+# Update a task status in Beads (external to DevDocs)
+bd complete bd-c3d4
+
+# Sync status back to GitHub
+./scripts/bd-sync-to-github.sh 123 bd-xxxx
+
+# Archive with Beads stats
+./scripts/archive-devdocs.sh issue-123-feature-name
+# Archive includes: "Beads Task Tracking" section with completion stats
+```
+
+**Script-by-Script Examples:**
+
+**bd-init.sh** - Initialize epic from devdocs:
+```bash
+./scripts/bd-init.sh issue-123-feature
+
+# Output:
+# {
+#   "epic_id": "bd-a1b2",
+#   "total_tasks": 8,
+#   "created_tasks": 8
+# }
+```
+
+**bd-from-plan.sh** - Extract tasks from plan:
+```bash
+./scripts/bd-from-plan.sh docs/plans/feature/plan.md
+
+# Output (JSON):
+# {
+#   "phases": [
+#     {
+#       "name": "Phase 1: Setup",
+#       "tasks": [
+#         {"title": "Create data models", "estimate": "1h", "deps": []},
+#         {"title": "Add unit tests", "estimate": "2h", "deps": ["bd-c3d4"]}
+#       ]
+#     }
+#   ]
+# }
+```
+
+**bd-sync-to-github.sh** - Sync epic status to issue:
+```bash
+./scripts/bd-sync-to-github.sh 123 bd-a1b2
+
+# Posts GitHub comment:
+# "Epic Progress: 6/8 tasks complete (75%)
+#  See devdocs for details: docs/plans/feature/"
+```
+
+**bd-parallel-tasks.sh** - Find ready tasks:
+```bash
+./scripts/bd-parallel-tasks.sh bd-a1b2
+
+# Output:
+# bd-e5f6: Implement batch upload (no blockers)
+# bd-g7h8: Add integration tests (no blockers)
+```
+
+**bd-cleanup.sh** - Archive epic and get stats:
+```bash
+./scripts/bd-cleanup.sh bd-a1b2
+
+# Output (JSON):
+# {
+#   "epic_id": "bd-a1b2",
+#   "total": 8,
+#   "completed": 8,
+#   "completion_rate": 100.0,
+#   "archived_at": "2026-02-04T10:30:00Z"
+# }
+```
+
+### Benefits
+
+**Structured Task Tracking:**
+- Before: Manual task lists in progress.md, no task state persistence
+- After: Structured task state in `.beads/` (git-ignored), task dependencies enforced
+
+**Team Coordination:**
+- Before: No visibility into what others are working on, potential merge conflicts discovered late
+- After: Parallel work detection warns of conflicts, team members see current task status
+
+**GitHub Integration:**
+- Before: Manual issue updates, no automatic progress reporting
+- After: Automatic issue comments with progress, epic status synced to GitHub
+
+**Progress Visibility:**
+- Before: Progress only visible in local files, hard to see completion percentage
+- After: Completion stats (e.g., "6/8 tasks, 75%"), archive includes final task metrics
+
+**Parallel Work Opportunities:**
+- Before: Sequential work (wait for one task to finish), manual tracking of task dependencies
+- After: `bd-parallel-tasks.sh` shows ready tasks, team members can pick up parallel work
+
+### Key Design Decisions
+
+1. **Optional Integration:** Beads is optional. DevDocs works standalone with markdown-only tracking.
+
+2. **One-Way Sync:** Beads → GitHub (not bidirectional). Beads is the source of truth.
+
+3. **Git-Ignored State:** `.beads/` directory not committed. Task state is local, sync via GitHub.
+
+4. **Automatic Detection:** Scripts auto-detect Beads using `command -v bd`.
+
+5. **Graceful Degradation:** If Beads unavailable, scripts skip Beads features silently.
+
+### Next Steps
+
+**For Solo Developers:**
+1. Use DevDocs standalone (no Beads needed)
+2. Focus on session handoff and progress tracking
+3. Archive completed work for future reference
+
+**For Team Environments:**
+1. Install Beads for task coordination
+2. Use `--beads` flag when creating devdocs
+3. Run `bd-sync-to-github.sh` regularly to update issues
+4. Use `bd-parallel-tasks.sh` to find work for team members
+
+**Testing the Integration:**
+
+Follow the test scenarios in `TESTING.md`:
+- Scenario 4: Beads task start
+- Scenario 5: Parallel work detection
+- Scenario 6: Progress sync
+- Scenario 7: Task completion
+- Scenario 9: Full end-to-end workflow
+
+**Contributing Improvements:**
+
+Potential enhancements:
+1. Auto-sync on commit: Git hook to run `bd-sync-to-github.sh`
+2. Slack integration: Notify team when tasks become ready
+3. Time tracking: Estimate vs actual time for tasks
+4. Burndown charts: Visual progress tracking
+5. Task templates: Reusable task structures for common patterns
+
+### Troubleshooting
+
+**Issue: Beads not detected by scripts**
+
+Solution:
+```bash
+# Ensure Beads is in PATH
+command -v bd
+# Should output: /path/to/bd
+
+# If not found, install or add to PATH
+export PATH="$PATH:/path/to/beads/bin"
+```
+
+**Issue: Epic initialization fails**
+
+Solution:
+```bash
+# Check plan.md structure
+cat plan.md | grep "^## Phase"
+# Should show phase headers
+
+# Verify plan has tasks
+./scripts/bd-from-plan.sh plan.md
+# Should output JSON with tasks
+```
+
+**Issue: GitHub sync fails**
+
+Solution:
+```bash
+# Verify GitHub CLI authenticated
+gh auth status
+
+# Check issue exists
+gh issue view <issue-number>
+
+# Test with dry-run
+./scripts/bd-sync-to-github.sh <issue> <epic> --dry-run
+```
+
+For more help:
+- See `TESTING.md` for test scenarios
+- See `SKILL.md` for detailed workflow documentation
+- Check script help: `./scripts/bd-init.sh --help`
 
 ## Quick Start (Copy-Paste)
 

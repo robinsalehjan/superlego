@@ -11,6 +11,8 @@ Maintain session continuity across AI-assisted development sessions by persistin
 
 **Superpowers Integration:** DevDocs integrates with the `superpowers` plugin workflow. When superpowers creates specs in `/docs/plans/`, devdocs adds progress tracking alongside them.
 
+**Beads Integration:** DevDocs can integrate with Beads for task tracking. When Beads is available, devdocs can sync task status and detect parallel work across team members.
+
 ## When to Use
 
 - Starting a new multi-session task or feature implementation
@@ -19,6 +21,8 @@ Maintain session continuity across AI-assisted development sessions by persistin
 - Implementing a GitHub issue with detailed tracking needs
 - Complex work requiring progress tracking and failed-approach logging
 - **Executing a superpowers plan** that spans multiple sessions
+- **Working with Beads task tracking** to coordinate with team members
+- **Detecting parallel work** when multiple people work on the same codebase
 
 ## Superpowers Integration
 
@@ -97,6 +101,67 @@ docs/plans/
 - Single session task (< 2 hours)
 - Simple implementation from clear plan
 - No session handoff needed
+
+## Beads Integration
+
+DevDocs can integrate with Beads for enhanced task tracking and team collaboration. Beads provides structured task state management and helps detect when multiple team members are working on overlapping tasks.
+
+### Benefits
+
+**Task State Synchronization:**
+- Beads stores task status in `.beads/` directory (git-ignored)
+- Updates sync with GitHub issues automatically
+- Tracks task lifecycle: planning → in_progress → review → done
+
+**Parallel Work Detection:**
+- Detects when team members work on same files
+- Provides warnings before potential merge conflicts
+- Helps coordinate work distribution
+
+**GitHub Integration:**
+- Syncs task status with GitHub issue labels
+- Updates issue comments with progress
+- Links tasks to PRs automatically
+
+### Workflow with Beads
+
+When Beads is available, devdocs enhances the workflow:
+
+```
+1. superpowers:writing-plans      → Create plan in docs/plans/
+2. beads task start <issue>       → Initialize task tracking
+3. devdocs-create.sh <issue>      → Create progress.md
+4. [Work on implementation]
+5. beads task status              → Check for parallel work
+6. beads task update              → Sync progress to GitHub
+7. beads task complete            → Mark done, trigger review
+8. archive-devdocs.sh <feature>   → Archive session history
+```
+
+### Beads Commands Integration
+
+DevDocs templates include Beads command references:
+
+| Command | Purpose | When to Use |
+|---------|---------|-------------|
+| `beads task start <issue>` | Initialize task tracking | After creating devdocs |
+| `beads task status` | Check current task state | Before starting work session |
+| `beads task update` | Sync progress to GitHub | After completing a phase |
+| `beads task complete` | Mark task done | Before archiving devdocs |
+| `beads check` | Detect parallel work | Before pushing changes |
+
+### When to Use Beads with DevDocs
+
+**Use Beads when:**
+- Working in a team environment with multiple developers
+- Need to coordinate work on shared codebase
+- Want automatic GitHub issue synchronization
+- Need parallel work detection
+
+**Skip Beads when:**
+- Working solo on personal project
+- GitHub integration not needed
+- Simple task tracking in devdocs is sufficient
 
 ## Workflow
 
@@ -401,6 +466,105 @@ chmod +x scripts/*.sh
 ```
 
 This standardizes script location at `./scripts/` for use across all skills.
+
+### Beads Integration Workflows
+
+**Detecting Beads Availability:**
+```bash
+# Check if Beads is installed and configured
+command -v beads >/dev/null 2>&1 && echo "Beads available"
+
+# Check if current project uses Beads
+[ -f ".beads/config.json" ] && echo "Beads configured for project"
+```
+
+**Starting Work with Beads:**
+```bash
+# After creating devdocs, initialize Beads tracking
+beads task start <issue-number>
+
+# This creates:
+# - .beads/tasks/<issue-number>.json (task state)
+# - Links to GitHub issue
+# - Sets status to "in_progress"
+```
+
+**Checking for Parallel Work:**
+```bash
+# Before starting a work session, check for conflicts
+beads check
+
+# Example output:
+# Warning: User @alice is working on src/feature.py (issue #123)
+# Your task #124 also modifies this file
+# Consider coordinating before proceeding
+```
+
+**Syncing Progress to GitHub:**
+```bash
+# After completing a phase in progress.md
+beads task update
+
+# This:
+# - Reads current phase from progress.md
+# - Updates GitHub issue with comment
+# - Syncs task status to .beads/
+```
+
+**Completing Work with Beads:**
+```bash
+# Before archiving devdocs
+beads task complete
+
+# This:
+# - Sets task status to "done"
+# - Adds completion comment to GitHub issue
+# - Updates .beads/tasks/<issue>.json
+# - Optionally creates PR if configured
+```
+
+**Agent Instructions for Beads:**
+
+When Beads is available, agents should:
+
+1. **On task start:**
+   - Run `beads task start <issue>` after creating devdocs
+   - Include Beads status in progress.md header
+
+2. **During work:**
+   - Run `beads check` before modifying files to detect parallel work
+   - If parallel work detected, inform user and suggest coordination
+   - Update Beads status when completing phases
+
+3. **On session handoff:**
+   - Run `beads task update` to sync progress to GitHub
+   - Include Beads status in handoff notes
+
+4. **On completion:**
+   - Run `beads task complete` before archiving
+   - Verify GitHub issue updated correctly
+
+**Integration with Templates:**
+
+The progress.template.md includes Beads integration fields:
+
+```markdown
+## Beads Status (if using Beads)
+
+| Field | Value |
+|-------|-------|
+| **Task ID** | #<issue-number> |
+| **Status** | in_progress / review / done |
+| **Last Sync** | YYYY-MM-DD HH:MM |
+| **Parallel Work** | None / @user on file.py |
+
+**Beads Commands:**
+- Start: `beads task start <issue>`
+- Status: `beads task status`
+- Update: `beads task update`
+- Complete: `beads task complete`
+- Check: `beads check`
+```
 
 ## Reference Material
 

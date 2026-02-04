@@ -14,6 +14,7 @@
 **Plan:** [plan.md](plan.md)
 
 **GitHub Issue:** #[number] or N/A
+**Beads Epic:** `bd-xxxx` (if using Beads)
 **Last Updated:** [YYYY-MM-DD]
 **Current Phase:** [Phase X - Name]
 **Overall Status:** 🟡 In Progress
@@ -31,6 +32,31 @@
 | **Blocker** | None / [Description of blocker] |
 | **Failed Approaches** | None / [What was tried and didn't work] |
 | **Current Superpowers Skill** | [test-driven-development / systematic-debugging / none] |
+| **Beads Ready Tasks** | `bd ready --parent bd-xxxx` (if using Beads) |
+
+---
+
+## Beads Task Status
+
+> **Only include this section if using Beads integration**
+>
+> Source of truth for task tracking. Query with: `bd status bd-xxxx`
+
+**Epic Progress:** X/Y tasks complete
+
+| Task ID | Phase | Title | Status | Dependencies |
+|---------|-------|-------|--------|--------------|
+| bd-c3d4 | Phase 1 | Task title | ✅ Complete | — |
+| bd-e5f6 | Phase 1 | Task title | 🟡 In Progress | bd-c3d4 |
+| bd-g7h8 | Phase 1 | Task title | ⬜ Ready | bd-e5f6 |
+
+**Parallel Work Available:**
+```bash
+bd ready --parent bd-xxxx
+# Returns: bd-g7h8 (no blockers)
+```
+
+**GitHub Sync Status:** ✅ Auto-syncing on task completion
 
 ---
 
@@ -184,6 +210,10 @@ Continue work on [task-name]. Read .github/devdocs/[task-name]/progress.md for c
   - [ ] No linter warnings
   - [ ] Manual testing checklist complete
 
+- [ ] **Verify all Beads tasks complete** (if using Beads)
+  - [ ] Run: `bd status bd-xxxx` shows all tasks complete
+  - [ ] GitHub issue auto-closed by bd-sync-to-github.sh
+
 - [ ] **Request code review** (superpowers:requesting-code-review)
   - [ ] Create review request
   - [ ] Address all feedback
@@ -199,6 +229,10 @@ Continue work on [task-name]. Read .github/devdocs/[task-name]/progress.md for c
   - [ ] Verify entry added to `docs/plans/archive/INDEX.md`
   - [ ] Superpowers specs remain in `docs/plans/` (do not delete!)
   - [ ] Progress directory `docs/plans/<feature-name>/` deleted
+
+- [ ] **Archive Beads epic** (if using Beads)
+  - [ ] Beads epic automatically archived by archive-devdocs.sh
+  - [ ] Archive includes task completion stats
 
 - [ ] **Close GitHub Issue** (if applicable)
   - [ ] Ensure final PR includes `Closes #<number>` in description

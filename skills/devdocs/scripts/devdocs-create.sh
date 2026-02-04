@@ -631,6 +631,61 @@ fi
 echo -e "${GREEN}✅ Created progress.md${NC}"
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# Beads Integration
+# ═══════════════════════════════════════════════════════════════════════════════
+BEADS_EPIC_ID=""
+
+if command -v bd &> /dev/null; then
+    echo -e "${BLUE}🔷 Initializing Beads integration...${NC}"
+
+    # Initialize Beads if needed
+    "$REPO_ROOT/skills/devdocs/scripts/bd-init.sh" 2>/dev/null || {
+        echo -e "${YELLOW}⚠️  Beads initialization failed - continuing without Beads${NC}"
+    }
+
+    if [ -d ".beads" ]; then
+        # Sanitize ISSUE_TITLE for safe passing to bd (remove backticks and $)
+        SAFE_ISSUE_TITLE="${ISSUE_TITLE//[\`\$]/}"
+
+        # Create epic with proper JSON validation
+        BEADS_OUTPUT=$(bd create "$SAFE_ISSUE_TITLE" --epic \
+            --meta github_issue="$ISSUE_NUMBER" \
+            --meta github_url="$ISSUE_URL" \
+            --meta devdocs_path="$TASK_DIR" \
+            --json 2>&1)
+
+        if echo "$BEADS_OUTPUT" | jq -e . >/dev/null 2>&1; then
+            BEADS_EPIC_ID=$(echo "$BEADS_OUTPUT" | jq -r '.id')
+        else
+            echo -e "${YELLOW}⚠️  Failed to create Beads epic - invalid response${NC}"
+            BEADS_EPIC_ID=""
+        fi
+
+        if [ -n "$BEADS_EPIC_ID" ]; then
+            echo -e "${GREEN}✅ Created Beads epic: $BEADS_EPIC_ID${NC}"
+
+            # If superpowers plan exists, create phase tasks
+            if [ -n "$SUPERPOWERS_PLAN_SPEC" ] && [ -f "$SUPERPOWERS_PLAN_SPEC" ]; then
+                echo -e "${BLUE}📋 Creating phase tasks from plan...${NC}"
+                "$REPO_ROOT/skills/devdocs/scripts/bd-from-plan.sh" "$SUPERPOWERS_PLAN_SPEC" "$BEADS_EPIC_ID" 2>/dev/null || {
+                    echo -e "${YELLOW}⚠️  Failed to create tasks from plan${NC}"
+                }
+            fi
+
+            # Update progress.md with epic ID
+            sed -i '' "/^\*\*GitHub Issue:\*\*/a\\
+**Beads Epic:** \`$BEADS_EPIC_ID\`
+" "$PROGRESS_FILE"
+
+            echo -e "${GREEN}✅ Updated progress.md with Beads epic ID${NC}"
+        fi
+    fi
+else
+    echo -e "${YELLOW}⚠️  Beads not installed - using markdown-only tracking${NC}"
+    echo -e "   Install for enhanced task tracking: ${BLUE}npm install -g beads-ai${NC}"
+fi
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # Add comment to GitHub issue with link to devdocs
 # ═══════════════════════════════════════════════════════════════════════════════
 if [ "$USE_SUPERPOWERS" = true ]; then
@@ -638,11 +693,34 @@ if [ "$USE_SUPERPOWERS" = true ]; then
     COMMENT_BODY="🤖 **DevDocs Progress Tracking Created**
 
 Session continuity with **superpowers** integration:
-- [\`${DEVDOCS_RELATIVE_PATH}progress.md\`](${DEVDOCS_RELATIVE_PATH}progress.md) - Session handoffs, TDD cycles, debugging log
+- [\`${DEVDOCS_RELATIVE_PATH}progress.md\`](${DEVDOCS_RELATIVE_PATH}progress.md) - Session handoffs, TDD cycles, debugging log"
+
+    if [ -n "$BEADS_EPIC_ID" ]; then
+        COMMENT_BODY="$COMMENT_BODY
+
+**Beads Task Tracking:** \`$BEADS_EPIC_ID\`
+- Query ready tasks: \`bd ready --parent $BEADS_EPIC_ID\`
+- View status: \`bd status $BEADS_EPIC_ID\`"
+    fi
+
+    # Determine filenames for design and plan specs
+    if [ -n "$SUPERPOWERS_DESIGN_SPEC" ] && [ -f "$SUPERPOWERS_DESIGN_SPEC" ]; then
+        DESIGN_FILENAME=$(basename "$SUPERPOWERS_DESIGN_SPEC")
+    else
+        DESIGN_FILENAME="YYYY-MM-DD-${FEATURE_NAME}-design.md"
+    fi
+
+    if [ -n "$SUPERPOWERS_PLAN_SPEC" ] && [ -f "$SUPERPOWERS_PLAN_SPEC" ]; then
+        PLAN_FILENAME=$(basename "$SUPERPOWERS_PLAN_SPEC")
+    else
+        PLAN_FILENAME="YYYY-MM-DD-${FEATURE_NAME}.md"
+    fi
+
+    COMMENT_BODY="$COMMENT_BODY
 
 Plan files (created by superpowers):
-- [\`docs/plans/$(basename "$SUPERPOWERS_DESIGN_SPEC" 2>/dev/null || echo "YYYY-MM-DD-${FEATURE_NAME}-design.md")\`] - Design specification
-- [\`docs/plans/$(basename "$SUPERPOWERS_PLAN_SPEC" 2>/dev/null || echo "YYYY-MM-DD-${FEATURE_NAME}.md")\`] - Implementation plan
+- [\`docs/plans/${DESIGN_FILENAME}\`] - Design specification
+- [\`docs/plans/${PLAN_FILENAME}\`] - Implementation plan
 
 To resume work on this issue, tell the agent:
 \`\`\`
@@ -654,7 +732,15 @@ else
 
 Session continuity files for AI-assisted development:
 - [\`${DEVDOCS_RELATIVE_PATH}plan.md\`](${DEVDOCS_RELATIVE_PATH}plan.md) - Goals, scope, approach
-- [\`${DEVDOCS_RELATIVE_PATH}progress.md\`](${DEVDOCS_RELATIVE_PATH}progress.md) - Session handoffs, status
+- [\`${DEVDOCS_RELATIVE_PATH}progress.md\`](${DEVDOCS_RELATIVE_PATH}progress.md) - Session handoffs, status"
+
+    if [ -n "$BEADS_EPIC_ID" ]; then
+        COMMENT_BODY="$COMMENT_BODY
+
+**Beads Task Tracking:** \`$BEADS_EPIC_ID\`"
+    fi
+
+    COMMENT_BODY="$COMMENT_BODY
 
 To resume work on this issue, tell the agent:
 \`\`\`

@@ -5,6 +5,5 @@
   "author": {
     "name": "robinsalehjan"
   },
-  "skills": "./skills",
-  "plugins": "./plugins/"
+  "skills": "./skills"
 }

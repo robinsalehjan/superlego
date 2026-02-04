@@ -4,44 +4,28 @@ A collection of AI coding assistant skills for Swift, SwiftUI, iOS/macOS develop
 
 ## Installation
 
-### Claude Code (Recommended)
+### Claude Code
 
-Add the marketplace and install plugins:
-
-```bash
-# Add the superlego marketplace
-/plugin marketplace add robinsalehjan/superlego
-
-# Install the skills collection
-/plugin install skills@superlego
-
-# Optionally install safety-hooks for additional protection
-/plugin install safety-hooks@superlego
-
-# Restart Claude Code
-```
-
-### Alternative: Direct GitHub Installation
-
-Install the main skills plugin directly:
+Install from GitHub:
 
 ```bash
 /plugin install robinsalehjan/superlego
 ```
 
-Note: Direct installation only includes the skills plugin. To get safety-hooks as a separate plugin, use the marketplace method above.
+### Safety Hooks (Optional)
+
+For additional protection against dangerous commands, install the safety-hooks plugin separately:
+
+```bash
+/plugin install robinsalehjan/superlego/plugins/safety-hooks
+```
 
 ### Local Development
 
 For local development or testing:
 
 ```bash
-# Add as a local marketplace
-/plugin marketplace add /path/to/superlego
-
-# Install plugins
-/plugin install skills@superlego
-/plugin install safety-hooks@superlego
+/plugin install /path/to/superlego
 ```
 
 ### Verify Installation
@@ -70,7 +54,8 @@ Or ask Claude to list available skills.
 
 | Skill | Description |
 |-------|-------------|
-| **devdocs** | Session continuity for AI-assisted development. Persist working state across sessions to prevent context loss. Integrates with superpowers plugin. |
+| **using-superlego** | Introduction to the superlego skills system. Overview of available skills and how to use them. |
+| **devdocs** | Session continuity for AI-assisted development. Persist working state across sessions to prevent context loss. |
 | **gh-issue-fix-flow** | End-to-end GitHub issue fix workflow. Issue intake, code changes, builds/tests, commit with closing message, and push. |
 | **ios-debugger-agent** | iOS debugging workflow with LLDB and Instruments. Crash investigation, memory debugging, performance profiling. |
 | **macos-spm-app-packaging** | macOS app packaging with Swift Package Manager. Notarization, code signing, DMG creation, release workflow. |
@@ -80,7 +65,7 @@ Or ask Claude to list available skills.
 
 | Skill | Description |
 |-------|-------------|
-| **safety-hooks** | Pre-tool-use safety hooks. Protect against dangerous bash commands, sensitive file access, and git branch protection. |
+| **safety-hooks** | Pre-tool-use safety hooks. Protect against dangerous bash commands, sensitive file access, and git branch protection. Available as a separate plugin at `plugins/safety-hooks/`. |
 
 ## Usage
 
@@ -147,15 +132,10 @@ What this skill does.
 
 ## Updating
 
-Update installed plugins from the marketplace:
+Update installed plugins:
 
 ```bash
-# Update individual plugins
-/plugin update skills@superlego
-/plugin update safety-hooks@superlego
-
-# Or update the marketplace to get latest versions
-/plugin marketplace update superlego
+/plugin update robinsalehjan/superlego
 ```
 
 ## License
@@ -164,4 +144,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Support
 
-- **Issues**: https://github.com/rsj/superlego/issues
+- **Issues**: https://github.com/robinsalehjan/superlego/issues

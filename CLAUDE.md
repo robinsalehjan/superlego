@@ -79,7 +79,6 @@ Read the references in the <skill-name> skill directory
 skills/                  # Auto-discovered skills (directory name = skill name)
 plugins/safety-hooks/    # Sub-plugin for bash command protection
 docs/plans/              # Planning documents
-.beads/                  # Issue tracking (beads task graph)
 ```
 
 ## Key Gotchas
